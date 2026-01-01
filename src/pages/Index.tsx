@@ -1,29 +1,33 @@
 import { useState, useMemo } from "react";
-import { animals } from "@/data/animals";
+import { useAnimals, useAnimalDetails } from "@/hooks/useAnimals";
 import { AnimalTabs } from "@/components/AnimalTabs";
 import { AnimalProfile } from "@/components/AnimalProfile";
 import { AnimalSections } from "@/components/AnimalSections";
 import { SearchBar } from "@/components/SearchBar";
 import { AIChat } from "@/components/AIChat";
-import { AnimalCard } from "@/components/AnimalCard";
-import { PawPrint, Heart, Sparkles } from "lucide-react";
+import { PawPrint, Heart, Sparkles, Loader2 } from "lucide-react";
 
 export default function Index() {
-  const [activeAnimal, setActiveAnimal] = useState<string | null>(animals[0]?.id || null);
+  const { data: animals = [], isLoading: animalsLoading } = useAnimals();
+  const [activeAnimal, setActiveAnimal] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
 
-  const selectedAnimal = useMemo(() => 
-    animals.find((a) => a.id === activeAnimal) || null, 
-    [activeAnimal]
-  );
+  // Set first animal as active when loaded
+  useMemo(() => {
+    if (animals.length > 0 && activeAnimal === null) {
+      setActiveAnimal(animals[0].id);
+    }
+  }, [animals, activeAnimal]);
+
+  const { data: animalDetails, isLoading: detailsLoading } = useAnimalDetails(activeAnimal);
 
   const filteredAnimals = useMemo(() => {
     return animals.filter((animal) => {
       const matchesSearch = 
         animal.namn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        animal.vetenskapligt_namn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        animal.beskrivning.toLowerCase().includes(searchQuery.toLowerCase());
+        (animal.vetenskapligt_namn?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+        (animal.beskrivning?.toLowerCase() || "").includes(searchQuery.toLowerCase());
       
       const matchesCategory = 
         selectedCategory === "all" || 
@@ -31,7 +35,9 @@ export default function Index() {
       
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [animals, searchQuery, selectedCategory]);
+
+  const selectedAnimal = animalDetails?.animal || null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -72,6 +78,7 @@ export default function Index() {
         animals={filteredAnimals}
         activeAnimal={activeAnimal}
         onSelectAnimal={setActiveAnimal}
+        isLoading={animalsLoading}
       />
 
       {/* Main Content */}
@@ -91,13 +98,28 @@ export default function Index() {
                 Jag svarar baserat på all data i appen och hjälper dig med skötselråd.
               </p>
             </div>
-            <AIChat selectedAnimal={null} animals={animals} />
+            <AIChat animalId={null} animalName={null} />
+          </div>
+        ) : detailsLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
           </div>
         ) : selectedAnimal ? (
           /* Animal Detail View */
           <div className="max-w-2xl mx-auto">
-            <AnimalProfile animal={selectedAnimal} />
-            <AnimalSections animal={selectedAnimal} />
+            <AnimalProfile 
+              animal={selectedAnimal} 
+              requirements={animalDetails?.requirements}
+              warnings={animalDetails?.warnings}
+            />
+            <AnimalSections 
+              animalId={selectedAnimal.id}
+              requirements={animalDetails?.requirements}
+              food={animalDetails?.food || []}
+              diseases={animalDetails?.diseases || []}
+              warnings={animalDetails?.warnings || []}
+              checklists={animalDetails?.checklists || []}
+            />
             
             {/* Animal-specific AI Chat */}
             <div className="mt-8">
@@ -105,24 +127,12 @@ export default function Index() {
                 <Sparkles className="w-5 h-5 text-primary" />
                 Chatta med {selectedAnimal.namn}-experten
               </h3>
-              <AIChat selectedAnimal={selectedAnimal} animals={animals} />
+              <AIChat animalId={selectedAnimal.id} animalName={selectedAnimal.namn} />
             </div>
           </div>
         ) : (
-          /* Animal Grid View (when search yields results but none selected) */
-          <div>
-            <h2 className="font-display text-xl font-bold mb-4">
-              {filteredAnimals.length} djur hittade
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredAnimals.map((animal) => (
-                <AnimalCard
-                  key={animal.id}
-                  animal={animal}
-                  onClick={() => setActiveAnimal(animal.id)}
-                />
-              ))}
-            </div>
+          <div className="text-center py-12 text-muted-foreground">
+            <p>Välj ett djur för att se information</p>
           </div>
         )}
       </main>
