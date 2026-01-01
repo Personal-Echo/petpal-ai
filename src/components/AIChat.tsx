@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, Sparkles, HelpCircle, ShoppingCart, AlertTriangle } from "lucide-react";
+import { Send, Bot, Sparkles, HelpCircle, ShoppingCart, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Animal } from "@/data/animals";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface Message {
   id: string;
@@ -12,8 +12,8 @@ interface Message {
 }
 
 interface AIChatProps {
-  selectedAnimal?: Animal | null;
-  animals: Animal[];
+  animalId?: string | null;
+  animalName?: string | null;
 }
 
 const quickActions = [
@@ -23,69 +23,95 @@ const quickActions = [
   { icon: Sparkles, label: "Tips för nybörjare", prompt: "Ge tips för nybörjare" },
 ];
 
-export function AIChat({ selectedAnimal, animals }: AIChatProps) {
+export function AIChat({ animalId, animalName }: AIChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const generateResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    if (selectedAnimal) {
-      // Animal-specific responses
-      if (lowerMessage.includes("inköp") || lowerMessage.includes("lista") || lowerMessage.includes("köpa")) {
-        return `🛒 **Inköpslista för ${selectedAnimal.namn}:**\n\n${selectedAnimal.checklistor.inköp.map((item, i) => `${i + 1}. ${item}`).join('\n')}\n\n💡 Kom ihåg att alltid kontrollera kvaliteten på utrustningen innan köp!`;
-      }
-      
-      if (lowerMessage.includes("misstag") || lowerMessage.includes("fel") || lowerMessage.includes("undvik")) {
-        return `⚠️ **Vanliga misstag med ${selectedAnimal.namn}:**\n\n${selectedAnimal.varningar.map(w => `• ${w}`).join('\n')}\n\n❤️ Genom att undvika dessa misstag ger du din ${selectedAnimal.namn} ett bra liv!`;
-      }
-      
-      if (lowerMessage.includes("temperatur") || lowerMessage.includes("värme")) {
-        return `🌡️ **Temperatur för ${selectedAnimal.namn}:**\n\n${selectedAnimal.skötsel.temperatur}\n\n💡 Tips: Använd alltid en digital termometer för exakt avläsning. Kontrollera både dag- och natttemperatur.`;
-      }
-      
-      if (lowerMessage.includes("mat") || lowerMessage.includes("foder") || lowerMessage.includes("äta")) {
-        const matLista = selectedAnimal.mat.map(m => `• **${m.typ}**: ${m.mängd} (${m.frekvens})`).join('\n');
-        return `🍽️ **Matguide för ${selectedAnimal.namn}:**\n\n${matLista}\n\n💧 **Vatten:** ${selectedAnimal.vatten.dryck}`;
-      }
-      
-      if (lowerMessage.includes("sjuk") || lowerMessage.includes("hälsa") || lowerMessage.includes("symptom")) {
-        const sjukdomar = selectedAnimal.sjukdomar.map(s => 
-          `**${s.namn}**\nSymptom: ${s.symptom.join(', ')}\nÅtgärd: ${s.åtgärd}`
-        ).join('\n\n');
-        return `🩺 **Vanliga hälsoproblem hos ${selectedAnimal.namn}:**\n\n${sjukdomar}\n\n⚠️ Vid allvarliga symptom, kontakta alltid veterinär!`;
-      }
-      
-      if (lowerMessage.includes("nybörjare") || lowerMessage.includes("tips") || lowerMessage.includes("börja")) {
-        return `🌟 **Tips för nya ${selectedAnimal.namn}-ägare:**\n\n1. **Förbered allt först** - Ha boende, mat och tillbehör redo innan djuret kommer hem\n\n2. **Lär dig artens behov** - ${selectedAnimal.beskrivning}\n\n3. **Rätt temperatur** - ${selectedAnimal.skötsel.temperatur}\n\n4. **Regelbundna rutiner** - Följ dagliga och veckovisa checklistor\n\n5. **Ha tålamod** - Det tar tid för djuret att vänja sig vid sitt nya hem\n\n📚 Svårighetsgrad: ${selectedAnimal.svårighet}`;
-      }
-      
-      // Default animal-specific response
-      return `Jag hjälper dig gärna med din ${selectedAnimal.namn}! 🐾\n\nDu kan fråga mig om:\n• Mat och utfodring\n• Temperatur och miljö\n• Vanliga sjukdomar\n• Inköpslista\n• Tips för nybörjare\n\nVad vill du veta mer om?`;
-    } else {
-      // General responses
-      if (lowerMessage.includes("djur")) {
-        const djurLista = animals.map(a => `${a.emoji} ${a.namn} (${a.svårighet})`).join('\n');
-        return `🐾 **Djur i databasen:**\n\n${djurLista}\n\nVälj ett djur i flikarna ovan för att få detaljerad information!`;
-      }
-      
-      if (lowerMessage.includes("nybörjare") || lowerMessage.includes("lätt")) {
-        const nybörjarDjur = animals.filter(a => a.svårighet === "Nybörjare");
-        return `🌟 **Nybörjarvänliga djur:**\n\n${nybörjarDjur.map(a => `${a.emoji} **${a.namn}**\n${a.beskrivning}`).join('\n\n')}\n\nDessa djur är bra för dig som är ny inom djurhållning!`;
-      }
-      
-      return `Hej! Jag är din AI-assistent för djurvård. 🤖\n\nJag kan hjälpa dig med:\n• Information om specifika djur\n• Skötselråd och rutiner\n• Inköpslistor\n• Hälsofrågor\n\n💡 **Tips:** Välj ett djur i flikarna ovan för mer detaljerad hjälp!`;
+  // Reset messages when animal changes
+  useEffect(() => {
+    setMessages([]);
+  }, [animalId]);
+
+  const streamChat = async (userMessages: Message[]) => {
+    const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/animal-chat`;
+
+    const resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({
+        messages: userMessages.map((m) => ({ role: m.role, content: m.content })),
+        animalId,
+      }),
+    });
+
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      throw new Error(errorData.error || `Request failed: ${resp.status}`);
     }
+
+    if (!resp.body) throw new Error("No response body");
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let textBuffer = "";
+    let assistantContent = "";
+
+    // Create initial assistant message
+    const assistantId = (Date.now() + 1).toString();
+    setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      textBuffer += decoder.decode(value, { stream: true });
+
+      let newlineIndex: number;
+      while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+        let line = textBuffer.slice(0, newlineIndex);
+        textBuffer = textBuffer.slice(newlineIndex + 1);
+
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (line.startsWith(":") || line.trim() === "") continue;
+        if (!line.startsWith("data: ")) continue;
+
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === "[DONE]") break;
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) {
+            assistantContent += content;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId ? { ...m, content: assistantContent } : m
+              )
+            );
+          }
+        } catch {
+          // Incomplete JSON, wait for more data
+          textBuffer = line + "\n" + textBuffer;
+          break;
+        }
+      }
+    }
+
+    return assistantContent;
   };
 
   const handleSubmit = async (message: string = input) => {
-    if (!message.trim()) return;
+    if (!message.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -93,22 +119,25 @@ export function AIChat({ selectedAnimal, animals }: AIChatProps) {
       content: message,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput("");
-    setIsTyping(true);
+    setIsLoading(true);
 
-    // Simulate AI thinking
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    const response = generateResponse(message);
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: response,
-    };
-
-    setMessages((prev) => [...prev, assistantMessage]);
-    setIsTyping(false);
+    try {
+      await streamChat(newMessages);
+    } catch (error) {
+      console.error("Chat error:", error);
+      toast({
+        title: "Fel",
+        description: error instanceof Error ? error.message : "Kunde inte få svar från AI",
+        variant: "destructive",
+      });
+      // Remove failed assistant message if any
+      setMessages((prev) => prev.filter((m) => m.role !== "assistant" || m.content));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -121,11 +150,11 @@ export function AIChat({ selectedAnimal, animals }: AIChatProps) {
           </div>
           <div>
             <h3 className="font-display font-semibold text-foreground">
-              {selectedAnimal ? `${selectedAnimal.emoji} ${selectedAnimal.namn}-experten` : "🐾 Djurvårds-AI"}
+              {animalName ? `${animalName}-experten` : "🐾 Djurvårds-AI"}
             </h3>
             <p className="text-xs text-muted-foreground">
-              {selectedAnimal 
-                ? `Fråga mig om ${selectedAnimal.namn}!` 
+              {animalName
+                ? `Fråga mig om ${animalName}!`
                 : "Fråga mig om alla djur i databasen"}
             </p>
           </div>
@@ -144,6 +173,7 @@ export function AIChat({ selectedAnimal, animals }: AIChatProps) {
                 size="sm"
                 onClick={() => handleSubmit(action.prompt)}
                 className="text-xs"
+                disabled={isLoading}
               >
                 <action.icon className="w-3 h-3 mr-1" />
                 {action.label}
@@ -159,13 +189,13 @@ export function AIChat({ selectedAnimal, animals }: AIChatProps) {
           <div className="text-center py-8 text-muted-foreground">
             <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
             <p className="text-sm">
-              {selectedAnimal 
-                ? `Ställ en fråga om ${selectedAnimal.namn}!`
+              {animalName
+                ? `Ställ en fråga om ${animalName}!`
                 : "Välj ett djur eller ställ en allmän fråga"}
             </p>
           </div>
         )}
-        
+
         {messages.map((message) => (
           <div
             key={message.id}
@@ -175,38 +205,16 @@ export function AIChat({ selectedAnimal, animals }: AIChatProps) {
             )}
           >
             <div className="whitespace-pre-wrap text-sm">
-              {message.content.split('\n').map((line, i) => {
-                // Simple markdown-like formatting
-                if (line.startsWith('**') && line.endsWith('**')) {
-                  return <strong key={i}>{line.slice(2, -2)}<br /></strong>;
-                }
-                if (line.includes('**')) {
-                  const parts = line.split(/\*\*(.*?)\*\*/g);
-                  return (
-                    <span key={i}>
-                      {parts.map((part, j) => 
-                        j % 2 === 1 ? <strong key={j}>{part}</strong> : part
-                      )}
-                      <br />
-                    </span>
-                  );
-                }
-                return <span key={i}>{line}<br /></span>;
-              })}
+              {message.content || (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Tänker...
+                </span>
+              )}
             </div>
           </div>
         ))}
-        
-        {isTyping && (
-          <div className="chat-bubble assistant animate-pulse">
-            <div className="flex gap-1">
-              <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
-            </div>
-          </div>
-        )}
-        
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -222,12 +230,16 @@ export function AIChat({ selectedAnimal, animals }: AIChatProps) {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={selectedAnimal ? `Fråga om ${selectedAnimal.namn}...` : "Ställ en fråga..."}
+            placeholder={animalName ? `Fråga om ${animalName}...` : "Ställ en fråga..."}
             className="flex-1"
-            disabled={isTyping}
+            disabled={isLoading}
           />
-          <Button type="submit" size="icon" disabled={!input.trim() || isTyping}>
-            <Send className="w-4 h-4" />
+          <Button type="submit" size="icon" disabled={!input.trim() || isLoading}>
+            {isLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
           </Button>
         </form>
       </div>

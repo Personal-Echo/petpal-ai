@@ -1,11 +1,12 @@
-import { Animal } from "@/data/animals";
+import { DbAnimal } from "@/hooks/useAnimals";
 import { cn } from "@/lib/utils";
 import { Bot } from "lucide-react";
 
 interface AnimalTabsProps {
-  animals: Animal[];
+  animals: DbAnimal[];
   activeAnimal: string | null;
   onSelectAnimal: (id: string | null) => void;
+  isLoading?: boolean;
 }
 
 const themeColors: Record<string, { bg: string; text: string; active: string }> = {
@@ -17,13 +18,30 @@ const themeColors: Record<string, { bg: string; text: string; active: string }> 
   bird: { bg: "bg-animal-bird-main", text: "text-animal-bird-text", active: "ring-animal-bird-accent" },
 };
 
-export function AnimalTabs({ animals, activeAnimal, onSelectAnimal }: AnimalTabsProps) {
+export function AnimalTabs({ animals, activeAnimal, onSelectAnimal, isLoading }: AnimalTabsProps) {
+  if (isLoading) {
+    return (
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
+        <div className="container py-3">
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="h-10 w-32 rounded-full bg-muted animate-pulse shrink-0"
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
       <div className="container py-3">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
           {animals.map((animal) => {
-            const theme = themeColors[animal.theme] || themeColors.gecko;
+            const theme = themeColors[animal.theme || "gecko"] || themeColors.gecko;
             const isActive = activeAnimal === animal.id;
             
             return (
@@ -37,7 +55,7 @@ export function AnimalTabs({ animals, activeAnimal, onSelectAnimal }: AnimalTabs
                   isActive && `ring-2 ${theme.active} ring-offset-2 ring-offset-background`
                 )}
               >
-                <span className="text-lg">{animal.emoji}</span>
+                <span className="text-lg">{animal.emoji || "🐾"}</span>
                 <span className="font-display font-semibold text-sm">{animal.namn}</span>
               </button>
             );
