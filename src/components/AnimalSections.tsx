@@ -1,10 +1,11 @@
-import { DbRequirements, DbFood, DbDisease, DbWarning, DbChecklist } from "@/hooks/useAnimals";
+import { DbRequirements, DbFood, DbDisease, DbWarning, DbChecklist, DbAnimal } from "@/hooks/useAnimals";
 import { ExpandableSection } from "./ExpandableSection";
 import { Checklist } from "./Checklist";
+import { PetLogSection } from "./PetLogSection";
 import { AlertTriangle } from "lucide-react";
-
 interface AnimalSectionsProps {
   animalId: string;
+  animalName: string;
   requirements?: DbRequirements | null;
   food?: DbFood[];
   diseases?: DbDisease[];
@@ -13,7 +14,8 @@ interface AnimalSectionsProps {
 }
 
 export function AnimalSections({ 
-  animalId, 
+  animalId,
+  animalName,
   requirements, 
   food = [], 
   diseases = [], 
@@ -176,6 +178,9 @@ export function AnimalSections({
           <Checklist type="veckovis" items={veckoItems} animalId={animalId} />
         </ExpandableSection>
       )}
+
+      {/* Personal Pet Log Section */}
+      <PetLogSection animalId={animalId} animalName={animalName} />
     </div>
   );
 }

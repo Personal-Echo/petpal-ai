@@ -223,6 +223,7 @@ export default function Index() {
             />
             <AnimalSections 
               animalId={selectedAnimal.id}
+              animalName={selectedAnimal.namn}
               requirements={animalDetails?.requirements}
               food={animalDetails?.food || []}
               diseases={animalDetails?.diseases || []}
