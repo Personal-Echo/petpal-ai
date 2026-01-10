@@ -45,12 +45,12 @@ export default function Admin() {
   const [isLoadingLogs, setIsLoadingLogs] = useState(true);
   const [activeTab, setActiveTab] = useState<"users" | "logs">("users");
 
-  // Redirect if not admin
+  // Redirect if not admin - only redirect after auth check is complete
   useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) {
-      navigate("/");
+    if (!authLoading && !isAdmin) {
+      navigate("/", { replace: true });
     }
-  }, [user, isAdmin, authLoading, navigate]);
+  }, [isAdmin, authLoading, navigate]);
 
   // Fetch users
   useEffect(() => {
