@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Play, Pause, RotateCcw, Save, Timer } from "lucide-react";
@@ -9,9 +10,10 @@ interface PetTimerProps {
 }
 
 export function PetTimer({ onSaveTime, disabled = false }: PetTimerProps) {
+  const { t } = useLanguage();
   const [seconds, setSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
-  const [label, setLabel] = useState("Aktivitet");
+  const [label, setLabel] = useState(t("petlog.labelActivity"));
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -53,14 +55,20 @@ export function PetTimer({ onSaveTime, disabled = false }: PetTimerProps) {
     }
   };
 
-  const labels = ["Aktivitet", "Matning", "Hantering", "Rengöring", "Observation"];
+  const labels = [
+    { key: "petlog.labelActivity", value: t("petlog.labelActivity") },
+    { key: "petlog.labelFeeding", value: t("petlog.labelFeeding") },
+    { key: "petlog.labelHandling", value: t("petlog.labelHandling") },
+    { key: "petlog.labelCleaning", value: t("petlog.labelCleaning") },
+    { key: "petlog.labelObservation", value: t("petlog.labelObservation") },
+  ];
 
   return (
     <Card className="bg-card border-border">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-3">
           <Timer className="w-4 h-4 text-primary" />
-          <span className="font-medium text-sm">Tidtagare</span>
+          <span className="font-medium text-sm">{t("petlog.timer")}</span>
         </div>
 
         {/* Timer Display */}
@@ -74,16 +82,16 @@ export function PetTimer({ onSaveTime, disabled = false }: PetTimerProps) {
         <div className="flex flex-wrap gap-1 mb-4">
           {labels.map((l) => (
             <button
-              key={l}
-              onClick={() => setLabel(l)}
+              key={l.key}
+              onClick={() => setLabel(l.value)}
               disabled={disabled}
               className={`px-2 py-1 text-xs rounded-full transition-colors ${
-                label === l
+                label === l.value
                   ? "bg-primary text-primary-foreground"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               } disabled:opacity-50`}
             >
-              {l}
+              {l.value}
             </button>
           ))}
         </div>
@@ -98,7 +106,7 @@ export function PetTimer({ onSaveTime, disabled = false }: PetTimerProps) {
               className="flex-1 gap-2"
             >
               <Play className="w-4 h-4" />
-              Start
+              {t("petlog.start")}
             </Button>
           ) : (
             <Button
@@ -109,7 +117,7 @@ export function PetTimer({ onSaveTime, disabled = false }: PetTimerProps) {
               className="flex-1 gap-2"
             >
               <Pause className="w-4 h-4" />
-              Paus
+              {t("petlog.pause")}
             </Button>
           )}
 
@@ -132,6 +140,7 @@ export function PetTimer({ onSaveTime, disabled = false }: PetTimerProps) {
               className="gap-2"
             >
               <Save className="w-4 h-4" />
+              {t("petlog.save")}
             </Button>
           )}
         </div>
