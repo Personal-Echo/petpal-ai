@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useUserSettings } from "./useUserSettings";
+import React, { createContext, useContext, useState, ReactNode } from "react";
 
 // Translation definitions
 const translations = {
@@ -695,20 +694,21 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const { settings, saveSettings } = useUserSettings();
-  const [language, setLanguageState] = useState<Language>((settings.language as Language) || "sv");
-
-  // Sync with user settings
-  useEffect(() => {
-    if (settings.language && settings.language !== language) {
-      setLanguageState(settings.language as Language);
+  // Initialize from localStorage first for immediate effect
+  const [language, setLanguageState] = useState<Language>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('app-language');
+      if (saved && ['sv', 'en', 'de', 'no', 'fi', 'es'].includes(saved)) {
+        return saved as Language;
+      }
     }
-  }, [settings.language]);
+    return 'sv';
+  });
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    // Also save to user settings if user is logged in
-    saveSettings({ language: lang });
+    // Save to localStorage for persistence
+    localStorage.setItem('app-language', lang);
   };
 
   const t = (key: TranslationKey): string => {

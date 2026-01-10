@@ -110,6 +110,9 @@ export function SettingsTab() {
     // Update global language immediately
     setGlobalLanguage(localLanguage);
     
+    // Also save to localStorage for persistence
+    localStorage.setItem('app-language', localLanguage);
+    
     const success = await saveSettings({ language: localLanguage, theme });
     if (success) {
       toast.success(t("settings.saved"));
