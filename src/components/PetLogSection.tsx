@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/hooks/useLanguage";
 import { PetTimer } from "./PetTimer";
 import { PetLogForm } from "./PetLogForm";
 import { PetLogTable } from "./PetLogTable";
@@ -16,6 +17,7 @@ interface PetLogSectionProps {
 
 export function PetLogSection({ animalId, animalName }: PetLogSectionProps) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [savedTime, setSavedTime] = useState<{ seconds: number; label: string } | null>(null);
 
   const handleSaveTime = (seconds: number, label: string) => {
@@ -28,15 +30,15 @@ export function PetLogSection({ animalId, animalName }: PetLogSectionProps) {
 
   if (!user) {
     return (
-      <ExpandableSection title="Min djurlogg" emoji="📓">
+      <ExpandableSection title={t("petlog.title")} emoji="📓">
         <div className="text-center py-6">
           <p className="text-sm text-muted-foreground mb-4">
-            Logga in för att spara personliga anteckningar om ditt djur
+            {t("petlog.loginPrompt")}
           </p>
           <Link to="/auth">
             <Button size="sm" className="gap-2">
               <LogIn className="w-4 h-4" />
-              Logga in
+              {t("petlog.login")}
             </Button>
           </Link>
         </div>
@@ -47,7 +49,7 @@ export function PetLogSection({ animalId, animalName }: PetLogSectionProps) {
   return (
     <div className="space-y-4">
       {/* Timer & Reminders Row */}
-      <ExpandableSection title="Timer & Påminnelser" emoji="⏱️" defaultOpen>
+      <ExpandableSection title={t("petlog.timerAndReminders")} emoji="⏱️" defaultOpen>
         <div className="grid gap-4 md:grid-cols-2">
           <PetTimer onSaveTime={handleSaveTime} />
           <PetReminders animalId={animalId} animalName={animalName} />
@@ -55,7 +57,7 @@ export function PetLogSection({ animalId, animalName }: PetLogSectionProps) {
       </ExpandableSection>
 
       {/* Pet Log */}
-      <ExpandableSection title="Min djurlogg" emoji="📓" defaultOpen>
+      <ExpandableSection title={t("petlog.title")} emoji="📓" defaultOpen>
         <div className="space-y-4">
           <PetLogForm
             animalId={animalId}

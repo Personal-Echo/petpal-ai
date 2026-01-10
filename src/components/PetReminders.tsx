@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLanguage } from "@/hooks/useLanguage";
 import { useReminders, useAddReminder, useToggleReminder, useDeleteReminder } from "@/hooks/useReminders";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ interface PetRemindersProps {
 }
 
 export function PetReminders({ animalId, animalName }: PetRemindersProps) {
+  const { t } = useLanguage();
   const [newReminder, setNewReminder] = useState("");
   const { data: reminders = [], isLoading } = useReminders(animalId);
   const addReminder = useAddReminder();
@@ -33,11 +35,11 @@ export function PetReminders({ animalId, animalName }: PetRemindersProps) {
 
   // Default reminders for common pets
   const defaultReminders = [
-    `Glöm inte mata ${animalName}!`,
-    `Byt vatten för ${animalName}`,
-    `Rengör ${animalName}s boende`,
-    `Kontrollera temperaturen`,
-    `Hantera ${animalName} idag`,
+    t("petlog.defaultReminder1").replace("{name}", animalName),
+    t("petlog.defaultReminder2").replace("{name}", animalName),
+    t("petlog.defaultReminder3").replace("{name}", animalName),
+    t("petlog.defaultReminder4"),
+    t("petlog.defaultReminder5").replace("{name}", animalName),
   ];
 
   const addDefaultReminder = (text: string) => {
@@ -49,14 +51,14 @@ export function PetReminders({ animalId, animalName }: PetRemindersProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <Bell className="w-4 h-4 text-primary" />
-          Mina påminnelser
+          {t("petlog.reminders")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Add Form */}
         <form onSubmit={handleAdd} className="flex gap-2">
           <Input
-            placeholder="Ny påminnelse..."
+            placeholder={t("petlog.newReminder")}
             value={newReminder}
             onChange={(e) => setNewReminder(e.target.value)}
             className="text-sm"
@@ -78,7 +80,7 @@ export function PetReminders({ animalId, animalName }: PetRemindersProps) {
         {/* Quick Add Defaults */}
         {pendingReminders.length === 0 && completedReminders.length === 0 && (
           <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">Snabbförslag:</p>
+            <p className="text-xs text-muted-foreground">{t("petlog.quickSuggestions")}</p>
             <div className="flex flex-wrap gap-1">
               {defaultReminders.slice(0, 3).map((text) => (
                 <Button
@@ -176,7 +178,7 @@ export function PetReminders({ animalId, animalName }: PetRemindersProps) {
 
               {pendingReminders.length === 0 && completedReminders.length === 0 && (
                 <p className="text-center text-xs text-muted-foreground py-2">
-                  Inga påminnelser ännu
+                  {t("petlog.noReminders")}
                 </p>
               )}
             </div>
