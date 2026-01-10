@@ -143,8 +143,6 @@ export function PetTimer({ onSaveTime, disabled = false }: PetTimerProps) {
               {t("petlog.save")}
             </Button>
           )}
-            </Button>
-          )}
         </div>
       </CardContent>
     </Card>
